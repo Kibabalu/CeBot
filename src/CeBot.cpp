@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------------*/
 /*	Project 'bot2'	Cerasus bot	controlled by an ATmega328P                                          */
 /*					                                                                                 */
-/*					Hardware:  Microcontroller ATmega328P,                                           */
-/*							   Cerasus Bot with 6-channel Pololu Micro Maestro servo driver	         */
-/*								                                                       			     */
+/*					Hardware:   Cerasus Bot with Microcontroller ATmega328P and                      */
+/*							    6-channel Pololu Micro Maestro servo driver, communication	         */
+/*								with serial TTL interface                           			     */
 /*																							   	     */
 /*	Frank Kirschbaum (frank.kirschbaum@me.com)                                 					     */
 /*																								     */
@@ -51,10 +51,12 @@
 #include <FreeRTOS_AVR.h>                               // FreeRTOS - real time operating system
 #include <PololuMaestro.h>                              // support for Pololu Maestro servo driver
 
-#define ucRelaisPin 7                                   // digital output for the relais
-#define ucTaskMeasPin1 5                                 // digital output for task timing measurement
-#define ucTaskMeasPin2 6                                 // digital output for task timing measurement
-#define ucLEDPin1 13                                    // digital output for LED1
+#define ucTaskMeasPin1 5                                // digital output for task timing measurement
+#define ucTaskMeasPin2 6                                // digital output for task timing measurement
+#define ucLEDPin1 3                                     // digital output for LED1
+#define ucLEDPin2 13                                    // digital output for LED2
+#define ucLEDPin3 5                                     // digital output for LED3
+#define ucLEDPin4 7                                     // digital output for LED4
 #define ucNumberChannelsMaestro 6                       // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                         // Number pulses per microsecond Maestro board
 #define maestroSerial Serial                            // serial communication with the Maestro board
@@ -63,8 +65,11 @@
 /*
  * global declarations
  */
-uint8_t ucLED1State = LOW;                              // state of LED1, toggles from time to time
-uint8_t ucRelaisState = LOW;                            // state of the Relais
+uint8_t ucLED1State = 0;                              // state of LED1
+uint8_t ucLED2State = LOW;                              // state of LED2, toggles from time to time
+uint8_t ucLED3State = 0;                              // state of LED3, toggles from time to time
+uint8_t ucLED4State = 0;                              // state of LED4, toggles from time to time
+uint8_t ucRGBLEDState = 1;
 uint8_t ucTaskMeasState1 = LOW;                         // state of a pin
 uint8_t ucTaskMeasState2 = LOW;                         // state of a pin
 
@@ -94,6 +99,7 @@ MicroMaestro maestro(maestroSerial);
 void vGetActPos( uint16_t* usActCurPos );                       // Get actual servo positions
 void vSetDesPos( uint16_t* usActDesPos );                       // Set desired servo positions
 void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc ); // Set speed and accelaration limits
+static uint8_t ucRGBLEDStateMachine( void );
 static void vTask1000ms( void* arg );                           // 1000ms task function
 static void vTask100ms( void* arg );                            // 100ms task function
 static void vTask10ms( void* arg );                             // 10ms task function
@@ -134,6 +140,38 @@ void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc )
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
+ * RGB LED state machine
+ */
+uint8_t ucRGBLEDStateMachine( void )
+{
+    static uint8_t ucState;
+
+    switch( ucState )
+    {
+        case 1:
+            ucLED1State = 150;
+            ucLED3State = 0;
+            ucLED4State = 0;
+            return ucState = 2;
+            break;
+
+        case 2:
+            ucLED1State = 0;
+            ucLED3State = 150;
+            ucLED4State = 0;
+            return ucState = 3;
+            break;
+
+        case 3:
+            ucLED1State = 0;
+            ucLED3State = 0;
+            ucLED4State = 150;
+            return ucState = 1;
+            break;
+    }
+}
+/*---------------------------------------------------------------------------------------------------*/
+/*
  * 1000ms task
  */
 static void vTask1000ms( void* arg )
@@ -148,11 +186,17 @@ static void vTask1000ms( void* arg )
          * the following stuff is done repeately every 1000ms:
          */
 
-        ucRelaisState = ucRelaisState == LOW ? HIGH : LOW;  // toggle ucRelaisState
-        digitalWrite( ucRelaisPin, ucRelaisState );         // write ucRelaisState to ucRelaisPin
+         ucLED1State = ucLED1State == LOW ? HIGH : LOW;     // toggle ucLED1State2
+         digitalWrite( ucLEDPin1, ucLED1State );            // write ucLED2State to output ucLEDPin2
 
-        ucLED1State = ucLED1State == LOW ? HIGH : LOW;      // toggle ucLED1State1
-        digitalWrite( ucLEDPin1, ucLED1State );             // write ucLED1State1 to output ucLEDPin11
+
+        ucLED2State = ucLED2State == LOW ? HIGH : LOW;      // toggle ucLED1State2
+        digitalWrite( ucLEDPin2, ucLED2State );             // write ucLED2State to output ucLEDPin2
+
+        ucRGBLEDState = ucRGBLEDStateMachine( );                             // toggels the RGB-LED
+        analogWrite( ucLEDPin1, ucLED1State );              // write ucLED1State to output ucLEDPin1
+        analogWrite( ucLEDPin3, ucLED3State );              // write ucLED3State to output ucLEDPin3
+        analogWrite( ucLEDPin4, ucLED4State );              // write ucLED4State to output ucLEDPin4
 
         vSetLimits( usActMaxVel, ucActMaxAcc);              // set limits for speed and accelerations
 
@@ -218,10 +262,12 @@ static void vTask10ms( void* arg )
  */
 void setup( )
 {
-    pinMode( ucRelaisPin, OUTPUT );                             // set ucRelaisPin as an output
-    pinMode( ucTaskMeasPin1, OUTPUT );                           // set ucTaskMeasPin an an output
-    pinMode( ucTaskMeasPin2, OUTPUT );                           // set ucTaskMeasPin an an output
+    pinMode( ucTaskMeasPin1, OUTPUT );                          // set ucTaskMeasPin an an output
+    pinMode( ucTaskMeasPin2, OUTPUT );                          // set ucTaskMeasPin an an output
     pinMode( ucLEDPin1, OUTPUT );                               // Set ucLEDPin1 as an output
+    pinMode( ucLEDPin2, OUTPUT );                               // Set ucLEDPin1 as an output
+    pinMode( ucLEDPin3, OUTPUT );                               // Set ucLEDPin1 as an output
+    pinMode( ucLEDPin4, OUTPUT );                               // Set ucLEDPin1 as an output
 
     randomSeed(analogRead(5));                                  // randomize using noise from analog
 
@@ -252,9 +298,9 @@ void setup( )
      * start scheduler
      */
     // dshow( "starting scheduler ..." );
-    vTaskStartScheduler( );                                             // starting the scheduler
+    vTaskStartScheduler( );                                     // starting the scheduler
 
-    while( 1 );                                                         // everlasting loop
+    while( 1 );                                                 // everlasting loop
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
