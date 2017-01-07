@@ -75,7 +75,7 @@ uint8_t ucTaskMeasState2 = LOW;                         // state of a pin
 
 TaskHandle_t pvTask1000ms;                              // handle for 1000ms task
 TaskHandle_t pvTask100ms;                               // handle for 100ms task
-TaskHandle_t pvTask10ms;                                // handle for 10ms task
+TaskHandle_t pvTask20ms;                                // handle for 20ms task
 
 uint16_t    usActMaxVel[ ] = {  0, 0, 0, 0, 0, 0 };                     // maximum servo speeds
 uint8_t     ucActMaxAcc[ ] = { 4, 4, 4, 4, 4, 4 };                      // maximum servo accelarations
@@ -89,7 +89,7 @@ const PROGMEM uint32_t ulBaud = 19200;                          // Baud rate for
 
 const PROGMEM uint16_t iIntervalTicks1000ms = 977;              // sampling time in units of 1024 usec
 const PROGMEM uint16_t iIntervalTicks100ms = 98;                // sampling time in units of 1024 usec
-const PROGMEM uint16_t iIntervalTicks10ms = 10;                 // sampling time in units of 1024 usec
+const PROGMEM uint16_t iIntervalTicks20ms = 20;                 // sampling time in units of 1024 usec
 
 MicroMaestro maestro(maestroSerial);
 /*---------------------------------------------------------------------------------------------------*/
@@ -99,10 +99,10 @@ MicroMaestro maestro(maestroSerial);
 void vGetActPos( uint16_t* usActCurPos );                       // Get actual servo positions
 void vSetDesPos( uint16_t* usActDesPos );                       // Set desired servo positions
 void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc ); // Set speed and accelaration limits
-static uint8_t ucRGBLEDStateMachine( void );
+uint8_t ucRGBLEDStateMachine( void );                           // state machine for toggling RGB-LED
 static void vTask1000ms( void* arg );                           // 1000ms task function
 static void vTask100ms( void* arg );                            // 100ms task function
-static void vTask10ms( void* arg );                             // 10ms task function
+static void vTask20ms( void* arg );                             // 20ms task function
 void setup();                                                   // setup function
 /*---------------------------------------------------------------------------------------------------*/
 /*
@@ -140,7 +140,7 @@ void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc )
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
- * RGB LED state machine
+ * state machine for toggling the RGB LED
  */
 uint8_t ucRGBLEDStateMachine( void )
 {
@@ -238,18 +238,18 @@ static void vTask100ms( void* arg )
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
- * 10ms task
+ * 20ms task
  */
-static void vTask10ms( void* arg )
+static void vTask20ms( void* arg )
 {
     TickType_t ticks = xTaskGetTickCount( );    // initialise the ticks variable with the current time
 
     while ( 1 )
     {
-        vTaskDelayUntil( &ticks, iIntervalTicks10ms );      // wait until time for next task run
+        vTaskDelayUntil( &ticks, iIntervalTicks20ms );      // wait until time for next task run
 
         /*
-         * the following stuff is done repeately every 10ms:
+         * the following stuff is done repeately every 20ms:
          */
 
         ucTaskMeasState1 = ucTaskMeasState1 == LOW? HIGH : LOW;       // toggle ucTaskState1
@@ -284,8 +284,8 @@ void setup( )
                                                                 // create 1000ms task at priority 3
     s2 = xTaskCreate( vTask100ms, NULL, configMINIMAL_STACK_SIZE, NULL, 2, &pvTask100ms );
                                                                 // create 100ms task at priority 2
-    s3 = xTaskCreate( vTask10ms, NULL, configMINIMAL_STACK_SIZE, NULL, 1, &pvTask10ms );
-                                                                // create 10ms task at priority 1
+    s3 = xTaskCreate( vTask20ms, NULL, configMINIMAL_STACK_SIZE, NULL, 1, &pvTask20ms );
+                                                                // create 20ms task at priority 1
     /*
     * checking for creation errors
     */
