@@ -5,7 +5,7 @@
 /*							    6-channel Pololu Micro Maestro servo driver, communication	         */
 /*								with serial TTL interface                           			     */
 /*																							   	     */
-/*	Frank Kirschbaum (frank.kirschbaum@me.com)                                 					     */
+/*	2017 Frank Kirschbaum (frank.kirschbaum@me.com)                                 				 */
 /*																								     */
 /*																								     */
 /*	Kibas Coding Standard and Style Guide:                                    					     */
