@@ -50,6 +50,8 @@
 
 #include <FreeRTOS_AVR.h>                               // FreeRTOS - real time operating system
 #include <PololuMaestro.h>                              // support for Pololu Maestro servo driver
+#include <KibaControl.hpp>                              // 1-D- and 2-D-maps, PID controler
+#include <Neurona.h>
 
 #define ucTaskMeasPin1 5                                // digital output for task timing measurement
 #define ucTaskMeasPin2 6                                // digital output for task timing measurement
