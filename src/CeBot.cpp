@@ -48,36 +48,36 @@
 // #include <DebugMacro.h>                                 // dprint(x) and dshow("Blablubb");
 // #include <RegisterBitsMacros.h>                         // fast direct manipulation of registers
 
-#include <FreeRTOS_AVR.h>                               // FreeRTOS - real time operating system
-#include <PololuMaestro.h>                              // support for Pololu Maestro servo driver
-#include <KibaControl.hpp>                              // 1-D- and 2-D-maps, PID controler
-#include <Neurona.h>
+#include <FreeRTOS_AVR.h>                           // FreeRTOS - real time operating system
+#include <PololuMaestro.h>                          // support for Pololu Maestro servo driver
+#include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controler
+#include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
 
-#define ucTaskMeasPin1 5                                // digital output for task timing measurement
-#define ucTaskMeasPin2 6                                // digital output for task timing measurement
-#define ucLEDPin1 3                                     // digital output for LED1
-#define ucLEDPin2 13                                    // digital output for LED2
-#define ucLEDPin3 5                                     // digital output for LED3
-#define ucLEDPin4 7                                     // digital output for LED4
-#define ucNumberChannelsMaestro 6                       // Number channels of the Maestro board
-#define ucNumberPulsesMaestro 4                         // Number pulses per microsecond Maestro board
-#define maestroSerial Serial                            // serial communication with the Maestro board
+#define ucTaskMeasPin1 5                            // digital output for task timing measurement
+#define ucTaskMeasPin2 6                            // digital output for task timing measurement
+#define ucLEDPin1 3                                 // digital output for LED1
+#define ucLEDPin2 13                                // digital output for LED2
+#define ucLEDPin3 5                                 // digital output for LED3
+#define ucLEDPin4 7                                 // digital output for LED4
+#define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
+#define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
+#define maestroSerial Serial                        // serial communication with the Maestro board
 
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * global declarations
  */
 uint8_t ucLED1State = 0;                              // state of LED1
-uint8_t ucLED2State = LOW;                              // state of LED2, toggles from time to time
+uint8_t ucLED2State = LOW;                            // state of LED2, toggles from time to time
 uint8_t ucLED3State = 0;                              // state of LED3, toggles from time to time
 uint8_t ucLED4State = 0;                              // state of LED4, toggles from time to time
 uint8_t ucRGBLEDState = 1;
-uint8_t ucTaskMeasState1 = LOW;                         // state of a pin
-uint8_t ucTaskMeasState2 = LOW;                         // state of a pin
+uint8_t ucTaskMeasState1 = LOW;                       // state of a pin
+uint8_t ucTaskMeasState2 = LOW;                       // state of a pin
 
-TaskHandle_t pvTask1000ms;                              // handle for 1000ms task
-TaskHandle_t pvTask100ms;                               // handle for 100ms task
-TaskHandle_t pvTask20ms;                                // handle for 20ms task
+TaskHandle_t pvTask1000ms;                            // handle for 1000ms task
+TaskHandle_t pvTask100ms;                             // handle for 100ms task
+TaskHandle_t pvTask20ms;                              // handle for 20ms task
 
 uint16_t    usActMaxVel[ ] = {  0, 0, 0, 0, 0, 0 };                     // maximum servo speeds
 uint8_t     ucActMaxAcc[ ] = { 4, 4, 4, 4, 4, 4 };                      // maximum servo accelarations
