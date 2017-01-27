@@ -45,23 +45,34 @@
 
 // #define DEBUG 0                                         // enable/disable debug mode
 
-// #include <DebugMacro.h>                                 // dprint(x) and dshow("Blablubb");
-// #include <RegisterBitsMacros.h>                         // fast direct manipulation of registers
-
-#include <FreeRTOS_AVR.h>                           // FreeRTOS - real time operating system
+#include <DebugMacro.h>                                 // dprint(x) and dshow("Blablubb");
+#include <RegisterBitsMacros.h>                         // fast direct manipulation of registers
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <math.h>
+#include <util/atomic.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/sleep.h>
+#include <SPI.h>
+#include <FreeRTOSconfig.h>
+#include <Arduino_FreeRTOS.h>                       // FreeRTOS-Port for ATmega1284P
 #include <PololuMaestro.h>                          // support for Pololu Maestro servo driver
 #include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controler
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
 
-#define ucTaskMeasPin1 5                            // digital output for task timing measurement
-#define ucTaskMeasPin2 6                            // digital output for task timing measurement
-#define ucLEDPin1 3                                 // digital output for LED1
-#define ucLEDPin2 13                                // digital output for LED2
-#define ucLEDPin3 5                                 // digital output for LED3
-#define ucLEDPin4 7                                 // digital output for LED4
+/*#define ucTaskMeasPin1 5                            // digital output for task timing measurement
+#define ucTaskMeasPin2 6                            // digital output for task timing measurement*/
+
+#define LEDPORT PORTD
+#define ucLEDPin1 PD4                                 // digital output for LED0
+#define ucLEDPin2 PD5                                // digital output for LED1
+#define ucLEDPin3 PD6                                 // digital output for LED2
+
 #define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
-#define maestroSerial Serial                        // serial communication with the Maestro board
+#define maestroSerial Serial1                        // serial communication with the Maestro board
 
 /*---------------------------------------------------------------------------------------------------*/
 /*
@@ -142,38 +153,6 @@ void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc )
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
- * state machine for toggling the RGB LED
- */
-uint8_t ucRGBLEDStateMachine( void )
-{
-    static uint8_t ucState;
-
-    switch( ucState )
-    {
-        case 1:
-            ucLED1State = 150;
-            ucLED3State = 0;
-            ucLED4State = 0;
-            return ucState = 2;
-            break;
-
-        case 2:
-            ucLED1State = 0;
-            ucLED3State = 150;
-            ucLED4State = 0;
-            return ucState = 3;
-            break;
-
-        case 3:
-            ucLED1State = 0;
-            ucLED3State = 0;
-            ucLED4State = 150;
-            return ucState = 1;
-            break;
-    }
-}
-/*---------------------------------------------------------------------------------------------------*/
-/*
  * 1000ms task
  */
 static void vTask1000ms( void* arg )
@@ -191,14 +170,16 @@ static void vTask1000ms( void* arg )
          ucLED1State = ucLED1State == LOW ? HIGH : LOW;     // toggle ucLED1State2
          digitalWrite( ucLEDPin1, ucLED1State );            // write ucLED2State to output ucLEDPin2
 
-
-        ucLED2State = ucLED2State == LOW ? HIGH : LOW;      // toggle ucLED1State2
-        digitalWrite( ucLEDPin2, ucLED2State );             // write ucLED2State to output ucLEDPin2
-
-        ucRGBLEDState = ucRGBLEDStateMachine( );                             // toggels the RGB-LED
-        analogWrite( ucLEDPin1, ucLED1State );              // write ucLED1State to output ucLEDPin1
-        analogWrite( ucLEDPin3, ucLED3State );              // write ucLED3State to output ucLEDPin3
-        analogWrite( ucLEDPin4, ucLED4State );              // write ucLED4State to output ucLEDPin4
+        if(ucLED1State == LOW)
+        {
+            LEDPORT |= (1 << ucLEDPin1);
+            ucLED1State = HIGH;
+        }
+        else
+        {
+            LEDPORT &= ~(1 << ucLEDPin1);
+            ucLED1State = LOW;
+        }
 
         vSetLimits( usActMaxVel, ucActMaxAcc);              // set limits for speed and accelerations
 
@@ -235,7 +216,7 @@ static void vTask100ms( void* arg )
          */
 
          ucTaskMeasState2 = ucTaskMeasState2 == LOW? HIGH : LOW;       // toggle ucTaskState
-         digitalWrite( ucTaskMeasPin2, ucTaskMeasState2 );
+         //digitalWrite( ucTaskMeasPin2, ucTaskMeasState2 );
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -255,7 +236,7 @@ static void vTask20ms( void* arg )
          */
 
         ucTaskMeasState1 = ucTaskMeasState1 == LOW? HIGH : LOW;       // toggle ucTaskState1
-        digitalWrite( ucTaskMeasPin1, ucTaskMeasState1 );
+        //digitalWrite( ucTaskMeasPin1, ucTaskMeasState1 );
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -264,12 +245,10 @@ static void vTask20ms( void* arg )
  */
 void setup( )
 {
-    pinMode( ucTaskMeasPin1, OUTPUT );                          // set ucTaskMeasPin an an output
-    pinMode( ucTaskMeasPin2, OUTPUT );                          // set ucTaskMeasPin an an output
-    pinMode( ucLEDPin1, OUTPUT );                               // Set ucLEDPin1 as an output
-    pinMode( ucLEDPin2, OUTPUT );                               // Set ucLEDPin1 as an output
-    pinMode( ucLEDPin3, OUTPUT );                               // Set ucLEDPin1 as an output
-    pinMode( ucLEDPin4, OUTPUT );                               // Set ucLEDPin1 as an output
+    DDRD |= (1 << DDD0);                                        // PD0 output
+    DDRD |= (1 << DDD1);                                        // PD1 output
+    DDRD |= (1 << DDD2);                                        // PD2 output
+
 
     randomSeed(analogRead(5));                                  // randomize using noise from analog
 
