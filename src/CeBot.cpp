@@ -43,7 +43,7 @@
 /*                                                                                                   */
 /*---------------------------------------------------------------------------------------------------*/
 
-// #define DEBUG 0                                         // enable/disable debug mode
+#define DEBUG 0                                         // enable/disable debug mode
 
 #include <DebugMacro.h>                                 // dprint(x) and dshow("Blablubb");
 #include <RegisterBitsMacros.h>                         // fast direct manipulation of registers
@@ -55,15 +55,12 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
-#include <SPI.h>
+#include <SPI.h>                                    // Support for serial peripherial interface
 #include <FreeRTOSconfig.h>
 #include <Arduino_FreeRTOS.h>                       // FreeRTOS-Port for ATmega1284P
 #include <PololuMaestro.h>                          // support for Pololu Maestro servo driver
 #include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controler
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
-
-/*#define ucTaskMeasPin1 5                            // digital output for task timing measurement
-#define ucTaskMeasPin2 6                            // digital output for task timing measurement*/
 
 #define LEDPORT PORTD
 #define ucLEDPin1 PD4                                 // digital output for LED0
@@ -83,8 +80,6 @@ uint8_t ucLED2State = LOW;                            // state of LED2, toggles 
 uint8_t ucLED3State = 0;                              // state of LED3, toggles from time to time
 uint8_t ucLED4State = 0;                              // state of LED4, toggles from time to time
 uint8_t ucRGBLEDState = 1;
-uint8_t ucTaskMeasState1 = LOW;                       // state of a pin
-uint8_t ucTaskMeasState2 = LOW;                       // state of a pin
 
 TaskHandle_t pvTask1000ms;                            // handle for 1000ms task
 TaskHandle_t pvTask100ms;                             // handle for 100ms task
@@ -214,9 +209,6 @@ static void vTask100ms( void* arg )
         /*
          * the following stuff is done repeately every 100ms:
          */
-
-         ucTaskMeasState2 = ucTaskMeasState2 == LOW? HIGH : LOW;       // toggle ucTaskState
-         //digitalWrite( ucTaskMeasPin2, ucTaskMeasState2 );
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -234,9 +226,6 @@ static void vTask20ms( void* arg )
         /*
          * the following stuff is done repeately every 20ms:
          */
-
-        ucTaskMeasState1 = ucTaskMeasState1 == LOW? HIGH : LOW;       // toggle ucTaskState1
-        //digitalWrite( ucTaskMeasPin1, ucTaskMeasState1 );
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
