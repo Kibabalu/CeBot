@@ -43,47 +43,41 @@
 /*                                                                                                   */
 /*---------------------------------------------------------------------------------------------------*/
 
-#define DEBUG 0                                         // enable/disable debug mode
-
-#include <DebugMacro.h>                                 // dprint(x) and dshow("Blablubb");
-#include <RegisterBitsMacros.h>                         // fast direct manipulation of registers
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <util/atomic.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/sleep.h>
-#include <SPI.h>                                    // Support for serial peripherial interface
-#include <FreeRTOSconfig.h>
+#include <DebugMacro.h>                             // dprint(x) and dshow("Blablubb");
+#include <RegisterBitsMacros.h>                     // fast direct manipulation of registers
 #include <Arduino_FreeRTOS.h>                       // FreeRTOS-Port for ATmega1284P
+#include <SPI.h>                                    // Support for serial peripherial interface
 #include <PololuMaestro.h>                          // support for Pololu Maestro servo driver
-#include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controler
+#include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controller
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
 
-#define LEDPORT PORTD
-#define ucLEDPin1 PD4                                 // digital output for LED0
-#define ucLEDPin2 PD5                                // digital output for LED1
-#define ucLEDPin3 PD6                                 // digital output for LED2
+#define DEBUG 0                                     // enable/disable debug mode
+
+#define LEDPORT PORTD                               // PORTD digital outputs for LEDs etc.
+#define ucLED1 ( 1 << PD6 )                         // digital output PD4 for LED 1
+#define ucLED2 ( 1 << PD5 )                         // digital output PD5 for LED 2
+#define ucSummer ( 1 << PD7)                        // digital output PD7 for summer (aTeVal board)
+#define ucButton1 ( 1 << PD2)
+#define ucButton2 ( 1 << PD3)
+#define ucButton3 ( 1 << PD4)
+#define ucPoti1 ( 1 << PA1)
+#define ucPoti2 ( 1 << PA0)
 
 #define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
-#define maestroSerial Serial1                        // serial communication with the Maestro board
+#define maestroSerial Serial1                       // serial communication with the Maestro board
 
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * global declarations
  */
-uint8_t ucLED1State = 0;                              // state of LED1
+uint8_t ucLED1State = LOW;                            // state of LED1
 uint8_t ucLED2State = LOW;                            // state of LED2, toggles from time to time
-uint8_t ucLED3State = 0;                              // state of LED3, toggles from time to time
-uint8_t ucLED4State = 0;                              // state of LED4, toggles from time to time
-uint8_t ucRGBLEDState = 1;
+uint8_t ucLED3State = LOW;                            // state of LED3, toggles from time to time
 
 TaskHandle_t pvTask1000ms;                            // handle for 1000ms task
 TaskHandle_t pvTask100ms;                             // handle for 100ms task
-TaskHandle_t pvTask20ms;                              // handle for 20ms task
+TaskHandle_t pvTask10ms;                              // handle for 10ms task
 
 uint16_t    usActMaxVel[ ] = {  0, 0, 0, 0, 0, 0 };                     // maximum servo speeds
 uint8_t     ucActMaxAcc[ ] = { 4, 4, 4, 4, 4, 4 };                      // maximum servo accelarations
@@ -93,11 +87,11 @@ uint16_t    usActMinPos[ ] = { 432, 912, 944, 816, 352, 800 };          // minim
 uint16_t    usActMaxPos[ ] = { 2400, 2400, 2032, 2192, 2400, 2224 };    // maximum servo positions
 uint16_t    usActCurPos[ 6 ];                                           // actual servo positions
 
-const PROGMEM uint32_t ulBaud = 19200;                          // Baud rate for serial communication
+const PROGMEM uint32_t ulBaud = 19200;                  // Baud rate for serial communication
 
-const PROGMEM uint16_t iIntervalTicks1000ms = 977;              // sampling time in units of 1024 usec
-const PROGMEM uint16_t iIntervalTicks100ms = 98;                // sampling time in units of 1024 usec
-const PROGMEM uint16_t iIntervalTicks20ms = 20;                 // sampling time in units of 1024 usec
+const PROGMEM uint16_t iIntervalTicks1000ms = 977;      // sampling time in units of 1024 usec
+const PROGMEM uint16_t iIntervalTicks100ms = 98;        // sampling time in units of 1024 usec
+const PROGMEM uint16_t iIntervalTicks10ms = 10;         // sampling time in units of 1024 usec
 
 MicroMaestro maestro(maestroSerial);
 /*---------------------------------------------------------------------------------------------------*/
@@ -110,7 +104,7 @@ void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc ); // Set speed and
 uint8_t ucRGBLEDStateMachine( void );                           // state machine for toggling RGB-LED
 static void vTask1000ms( void* arg );                           // 1000ms task function
 static void vTask100ms( void* arg );                            // 100ms task function
-static void vTask20ms( void* arg );                             // 20ms task function
+static void vTask10ms( void* arg );                             // 10ms task function
 void setup();                                                   // setup function
 /*---------------------------------------------------------------------------------------------------*/
 /*
@@ -156,27 +150,16 @@ static void vTask1000ms( void* arg )
 
     while ( 1 )
     {
-        vTaskDelayUntil( &ticks, iIntervalTicks1000ms );    // wait until time for next task run
+        vTaskDelayUntil( &ticks, iIntervalTicks1000ms / portTICK_PERIOD_MS );    // wait until time for next task run
 
         /*
          * the following stuff is done repeately every 1000ms:
          */
 
-         ucLED1State = ucLED1State == LOW ? HIGH : LOW;     // toggle ucLED1State2
-         digitalWrite( ucLEDPin1, ucLED1State );            // write ucLED2State to output ucLEDPin2
+         // toggle LED 2
+         LEDPORT ^= ucLED2;
 
-        if(ucLED1State == LOW)
-        {
-            LEDPORT |= (1 << ucLEDPin1);
-            ucLED1State = HIGH;
-        }
-        else
-        {
-            LEDPORT &= ~(1 << ucLEDPin1);
-            ucLED1State = LOW;
-        }
-
-        vSetLimits( usActMaxVel, ucActMaxAcc);              // set limits for speed and accelerations
+        //vSetLimits( usActMaxVel, ucActMaxAcc);              // set limits for speed and accelerations
 
         //vGetActPos( usActCurPos );                        // get actual servo positions
 
@@ -188,10 +171,11 @@ static void vTask1000ms( void* arg )
         usActDesPos[ 4 ] = (uint16_t)random( usActMinPos[ 4 ], usActMaxPos[ 4 ] );
         usActDesPos[ 5 ] = (uint16_t)random( usActMinPos[ 5 ], usActMaxPos[ 5 ] );
 
-        if ( !maestro.getMovingState( ) )                    // if all movings are finished
+        /*if ( !maestro.getMovingState( ) )                    // if all movings are finished
         {
             vSetDesPos( usActDesPos );                       // set desired servo positions
-        }
+        }*/
+
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -204,28 +188,32 @@ static void vTask100ms( void* arg )
 
     while ( 1 )
     {
-        vTaskDelayUntil( &ticks, iIntervalTicks100ms );     // wait until time for next task run
+        vTaskDelayUntil( &ticks, iIntervalTicks100ms / portTICK_PERIOD_MS );     // wait until time for next task run
 
         /*
          * the following stuff is done repeately every 100ms:
          */
+
+         // toggle LED 1
+         LEDPORT ^= ucLED1;
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
 /*
- * 20ms task
+ * 10ms task
  */
-static void vTask20ms( void* arg )
+static void vTask10ms( void* arg )
 {
     TickType_t ticks = xTaskGetTickCount( );    // initialise the ticks variable with the current time
 
     while ( 1 )
     {
-        vTaskDelayUntil( &ticks, iIntervalTicks20ms );      // wait until time for next task run
-
+        //vTaskDelayUntil( &ticks, iIntervalTicks10ms );      // wait until time for next task run
+        vTaskDelayUntil( &ticks, iIntervalTicks10ms / portTICK_PERIOD_MS );
         /*
-         * the following stuff is done repeately every 20ms:
+         * the following stuff is done repeately every 10ms:
          */
+
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -234,17 +222,23 @@ static void vTask20ms( void* arg )
  */
 void setup( )
 {
-    DDRD |= (1 << DDD0);                                        // PD0 output
-    DDRD |= (1 << DDD1);                                        // PD1 output
-    DDRD |= (1 << DDD2);                                        // PD2 output
-
-
     randomSeed(analogRead(5));                                  // randomize using noise from analog
 
     maestroSerial.begin(ulBaud);
 
     /*
-     *task creation stuff:
+     * defining the input/output behaviour of the port pins
+     */
+    DDRD |= ucLED1 | ucLED2 | ucSummer;                  // digital outputs
+    DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3);     // digital inputs
+
+    ADMUX |= (1<<REFS0);                                // AVCC is reference voltage
+    ADCSRA |= (1<<ADPS1) | (1<<ADPS2);                  // dividing factor, frequency
+    ADCSRA |= (1<<ADEN);                                // switching on the ADC
+    ADCSRA |= (1<<ADSC);                                // 1st dummy converting
+
+    /*
+     * task creation stuff:
      */
     portBASE_TYPE s1, s2, s3;     // return variables for the RTOS task creation
     /*
@@ -254,8 +248,8 @@ void setup( )
                                                                 // create 1000ms task at priority 3
     s2 = xTaskCreate( vTask100ms, NULL, configMINIMAL_STACK_SIZE, NULL, 2, &pvTask100ms );
                                                                 // create 100ms task at priority 2
-    s3 = xTaskCreate( vTask20ms, NULL, configMINIMAL_STACK_SIZE, NULL, 1, &pvTask20ms );
-                                                                // create 20ms task at priority 1
+    s3 = xTaskCreate( vTask10ms, NULL, configMINIMAL_STACK_SIZE, NULL, 1, &pvTask10ms );
+                                                                // create 10ms task at priority 1
     /*
     * checking for creation errors
     */
