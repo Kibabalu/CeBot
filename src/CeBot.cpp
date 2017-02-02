@@ -57,11 +57,11 @@
 #define ucLED1 ( 1 << PD6 )                         // digital output PD4 for LED 1
 #define ucLED2 ( 1 << PD5 )                         // digital output PD5 for LED 2
 #define ucSummer ( 1 << PD7)                        // digital output PD7 for summer (aTeVal board)
-#define ucButton1 ( 1 << PD2)
-#define ucButton2 ( 1 << PD3)
-#define ucButton3 ( 1 << PD4)
-#define ucPoti1 ( 1 << PA1)
-#define ucPoti2 ( 1 << PA0)
+#define ucButton1 ( 1 << PD2)                       // digital input PD2 for button 1
+#define ucButton2 ( 1 << PD3)                       // digital input PD3 for button 2
+#define ucButton3 ( 1 << PD4)                       // digital input PD4 for button 3
+#define ucPoti1 ( 1 << PA1)                         // ADC PA1 for potentiometer 1
+#define ucPoti2 ( 1 << PA0)                         // ADC PA0 for potentiometer 1
 
 #define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
@@ -74,6 +74,10 @@
 uint8_t ucLED1State = LOW;                            // state of LED1
 uint8_t ucLED2State = LOW;                            // state of LED2, toggles from time to time
 uint8_t ucLED3State = LOW;                            // state of LED3, toggles from time to time
+uint16_t iADC1Value;                                  // Value uf ADC1
+uint16_t iADC2Value;                                  // Value uf ADC2
+uint16_t iADC3Value;                                  // Value uf ADC3
+uint16_t iADC4Value;                                  // Value uf ADC4
 
 TaskHandle_t pvTask1000ms;                            // handle for 1000ms task
 TaskHandle_t pvTask100ms;                             // handle for 100ms task
@@ -214,6 +218,15 @@ static void vTask10ms( void* arg )
          * the following stuff is done repeately every 10ms:
          */
 
+         ADCSRA |= (1<<ADSC);                                // starting reading ADC
+         while (ADCSRA & (1<<ADSC))                         // waiting til converting finshed
+         {}
+        iADC1Value = ADCW;                                    // reading converted value
+
+        if(!(PIND & ucButton1))                             // if ucButton pressed
+		{
+			PORTD ^= ucSummer;                                    // inverting pin ucSummer
+		}
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -232,10 +245,14 @@ void setup( )
     DDRD |= ucLED1 | ucLED2 | ucSummer;                  // digital outputs
     DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3);     // digital inputs
 
+	PORTD |= ucButton1 | ucButton2;                    // activating the pull ups
+
     ADMUX |= (1<<REFS0);                                // AVCC is reference voltage
     ADCSRA |= (1<<ADPS1) | (1<<ADPS2);                  // dividing factor, frequency
     ADCSRA |= (1<<ADEN);                                // switching on the ADC
     ADCSRA |= (1<<ADSC);                                // 1st dummy converting
+	while (ADCSRA & (1<<ADSC))                         // waiting til converting finshed
+	{}
 
     /*
      * task creation stuff:
