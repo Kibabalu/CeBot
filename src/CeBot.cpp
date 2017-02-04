@@ -62,13 +62,13 @@
 #define ucLED2 ( 1 << PD5 )                         // digital output PD5 for LED 2
 #define ucSummer ( 1 << PD7 )                       // digital output PD7 for summer (aTeVal board)
 
-#define ucButton1 ( 1 << PD2)                       // digital input PD2 for button 1
-#define ucButton2 ( 1 << PD3)                       // digital input PD3 for button 2
-#define ucButton3 ( 1 << PD4)                       // digital input PD4 for button 3
-#define ucPIRSensor ( 1 << PD1)                     // digital input for PIR sensor
+#define ucButton1 ( 1 << PD2 )                      // digital input PD2 for button 1
+#define ucButton2 ( 1 << PD3 )                      // digital input PD3 for button 2
+#define ucButton3 ( 1 << PD4 )                      // digital input PD4 for button 3
+#define ucPIRSensor ( 1 << PD1 )                    // digital input for PIR sensor
 
-#define ucPoti1 ( 1 << PA1)                         // ADC PA1 for potentiometer 1
-#define ucPoti2 ( 1 << PA0)                         // ADC PA0 for potentiometer 1
+#define ucPoti1 ( 1 << PA1 )                        // ADC PA1 for potentiometer 1
+#define ucPoti2 ( 1 << PA0 )                        // ADC PA0 for potentiometer 1
 #define ucSharpIR1 ( 1 << PA2 )                     // ADC PA2 for IR distance sensor from Sharp
 #define ucSharpIR2 ( 1 << PA3 )                     // ADC PA3 for IR distance sensor from Sharp
 
