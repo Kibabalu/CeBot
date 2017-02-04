@@ -50,18 +50,27 @@
 #include <PololuMaestro.h>                          // support for Pololu Maestro servo driver
 #include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controller
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
+#include <PirSensor.h>
+#include <SharpIR.h>
+
 
 #define DEBUG 0                                     // enable/disable debug mode
 
-#define LEDPORT PORTD                               // PORTD digital outputs for LEDs etc.
+#define DPORT1 PORTD                                // PORTD digital input and outputs for LEDs etc.
+
 #define ucLED1 ( 1 << PD6 )                         // digital output PD4 for LED 1
 #define ucLED2 ( 1 << PD5 )                         // digital output PD5 for LED 2
-#define ucSummer ( 1 << PD7)                        // digital output PD7 for summer (aTeVal board)
+#define ucSummer ( 1 << PD7 )                       // digital output PD7 for summer (aTeVal board)
+
 #define ucButton1 ( 1 << PD2)                       // digital input PD2 for button 1
 #define ucButton2 ( 1 << PD3)                       // digital input PD3 for button 2
 #define ucButton3 ( 1 << PD4)                       // digital input PD4 for button 3
+#define ucPIRSensor ( 1 << PD1)                     // digital input for PIR sensor
+
 #define ucPoti1 ( 1 << PA1)                         // ADC PA1 for potentiometer 1
 #define ucPoti2 ( 1 << PA0)                         // ADC PA0 for potentiometer 1
+#define ucSharpIR1 ( 1 << PA2 )                     // ADC PA2 for IR distance sensor from Sharp
+#define ucSharpIR2 ( 1 << PA3 )                     // ADC PA3 for IR distance sensor from Sharp
 
 #define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
@@ -76,8 +85,8 @@ uint8_t ucLED2State = LOW;                            // state of LED2, toggles 
 uint8_t ucLED3State = LOW;                            // state of LED3, toggles from time to time
 uint16_t iADC1Value;                                  // Value uf ADC1
 uint16_t iADC2Value;                                  // Value uf ADC2
-uint16_t iADC3Value;                                  // Value uf ADC3
-uint16_t iADC4Value;                                  // Value uf ADC4
+uint16_t iDist1;                                      // Distance sensor 1
+uint16_t iDist2;                                      // Distance sensor 2
 
 TaskHandle_t pvTask1000ms;                            // handle for 1000ms task
 TaskHandle_t pvTask100ms;                             // handle for 100ms task
@@ -97,7 +106,10 @@ const PROGMEM uint16_t iIntervalTicks1000ms = 977;      // sampling time in unit
 const PROGMEM uint16_t iIntervalTicks100ms = 98;        // sampling time in units of 1024 usec
 const PROGMEM uint16_t iIntervalTicks10ms = 10;         // sampling time in units of 1024 usec
 
-MicroMaestro maestro(maestroSerial);
+MicroMaestro maestro(maestroSerial);                                // serial com. with Maestro
+PirSensor PIRMotion = PirSensor(ucPIRSensor, 2, false, false);      // PIR movement sensor
+SharpIR IRDist1(GP2YA41SK0F, ucSharpIR1);                           // IR distance sensor 1
+SharpIR IRDist2(GP2YA41SK0F, ucSharpIR2);                           // IR distance sensor 2
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * function prototypes
@@ -161,7 +173,7 @@ static void vTask1000ms( void* arg )
          */
 
          // toggle LED 2
-         LEDPORT ^= ucLED2;
+         DPORT1 ^= ucLED2;
 
         //vSetLimits( usActMaxVel, ucActMaxAcc);              // set limits for speed and accelerations
 
@@ -199,7 +211,7 @@ static void vTask100ms( void* arg )
          */
 
          // toggle LED 1
-         LEDPORT ^= ucLED1;
+         DPORT1 ^= ucLED1;
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -223,6 +235,9 @@ static void vTask10ms( void* arg )
          {}
         iADC1Value = ADCW;                                    // reading converted value
 
+        iDist1 = IRDist1.getDistance(); //Calculate the distance in centimeters and store the value in a variable
+        iDist2 = IRDist2.getDistance(); //Calculate the distance in centimeters and store the value in a variable
+
         if(!(PIND & ucButton1))                             // if ucButton pressed
 		{
 			PORTD ^= ucSummer;                                    // inverting pin ucSummer
@@ -239,11 +254,13 @@ void setup( )
 
     maestroSerial.begin(ulBaud);
 
+    PIRMotion.begin();
+
     /*
      * defining the input/output behaviour of the port pins
      */
     DDRD |= ucLED1 | ucLED2 | ucSummer;                  // digital outputs
-    DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3);     // digital inputs
+    DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3 | ucPIRSensor);     // digital inputs
 
 	PORTD |= ucButton1 | ucButton2;                    // activating the pull ups
 
