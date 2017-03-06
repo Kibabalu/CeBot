@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------*/
-/*	Project 'bot2'	Cerasus bot	controlled by an ATmega328P                                          */
+/*	Project 'CeBot'	Cerasus bot	controlled by an ATmega328P                                          */
 /*					                                                                                 */
 /*					Hardware:   Cerasus Bot with Microcontroller ATmega328P and                      */
 /*							    6-channel Pololu Micro Maestro servo driver, communication	         */
@@ -51,7 +51,7 @@
 #include <KibaControl.hpp>                          // 1-D- and 2-D-maps, PID controller
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
 #include <PirSensor.h>
-#include <SharpIR.h>
+#include <SharpIR.h>                                // Support for sharp IR distance sensors
 
 
 #define DEBUG 0                                     // enable/disable debug mode
@@ -108,8 +108,8 @@ const PROGMEM uint16_t iIntervalTicks10ms = 10;         // sampling time in unit
 
 MicroMaestro maestro(maestroSerial);                                // serial com. with Maestro
 PirSensor PIRMotion = PirSensor(ucPIRSensor, 2, false, false);      // PIR movement sensor
-SharpIR IRDist1(GP2YA41SK0F, ucSharpIR1);                           // IR distance sensor 1
-SharpIR IRDist2(GP2YA41SK0F, ucSharpIR2);                           // IR distance sensor 2
+/*SharpIR IRDist1(GP2D120X, ucSharpIR1);                           // IR distance sensor 1
+SharpIR IRDist2(GP2D12FF, ucSharpIR2);                           // IR distance sensor 2 */
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * function prototypes
@@ -235,10 +235,10 @@ static void vTask10ms( void* arg )
          {}
         iADC1Value = ADCW;                                    // reading converted value
 
-        iDist1 = IRDist1.getDistance(); //Calculate the distance in centimeters and store the value in a variable
-        iDist2 = IRDist2.getDistance(); //Calculate the distance in centimeters and store the value in a variable
+        /*iDist1 = IRDist1.getDistance(); //Calculate the distance in centimeters and store the value in a variable
+        iDist2 = IRDist2.getDistance(); //Calculate the distance in centimeters and store the value in a variable*/
 
-        if(!(PIND & ucButton1))                             // if ucButton pressed
+        if(!(PIND & ucButton3))                             // if ucButton pressed
 		{
 			PORTD ^= ucSummer;                                    // inverting pin ucSummer
 		}
@@ -262,7 +262,7 @@ void setup( )
     DDRD |= ucLED1 | ucLED2 | ucSummer;                  // digital outputs
     DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3 | ucPIRSensor);     // digital inputs
 
-	PORTD |= ucButton1 | ucButton2;                    // activating the pull ups
+	PORTD |= ucButton1 | ucButton2 | ucButton3;                    // activating the pull ups
 
     ADMUX |= (1<<REFS0);                                // AVCC is reference voltage
     ADCSRA |= (1<<ADPS1) | (1<<ADPS2);                  // dividing factor, frequency
