@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------*/
-/*	Project 'CeBot'	Cerasus bot	controlled by an ATmega12848P                                          */
+/*	Project 'CeBot'	Cerasus bot	controlled by an ATmega1284P                                          */
 /*					                                                                                 */
 /*					Hardware:   Cerasus Bot with Microcontroller ATmega1284P and                      */
 /*							    6-channel Pololu Micro Maestro servo driver, communication	         */
