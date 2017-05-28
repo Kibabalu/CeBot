@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------------------------------*/
-/*	Project 'CeBot'	Cerasus bot	controlled by an ATmega328P                                          */
+/*	Project 'CeBot'	Cerasus bot	controlled by an ATmega12848P                                          */
 /*					                                                                                 */
-/*					Hardware:   Cerasus Bot with Microcontroller ATmega328P and                      */
+/*					Hardware:   Cerasus Bot with Microcontroller ATmega1284P and                      */
 /*							    6-channel Pololu Micro Maestro servo driver, communication	         */
 /*								with serial TTL interface                           			     */
 /*																							   	     */
@@ -106,10 +106,10 @@ const PROGMEM uint16_t iIntervalTicks1000ms = 977;      // sampling time in unit
 const PROGMEM uint16_t iIntervalTicks100ms = 98;        // sampling time in units of 1024 usec
 const PROGMEM uint16_t iIntervalTicks10ms = 10;         // sampling time in units of 1024 usec
 
-MicroMaestro maestro(maestroSerial);                                // serial com. with Maestro
-PirSensor PIRMotion = PirSensor(ucPIRSensor, 2, false, false);      // PIR movement sensor
-/*SharpIR IRDist1(GP2D120X, ucSharpIR1);                           // IR distance sensor 1
-SharpIR IRDist2(GP2D12FF, ucSharpIR2);                           // IR distance sensor 2 */
+MicroMaestro maestro(maestroSerial);                                    // serial com. with Maestro
+PirSensor PIRMotion = PirSensor(ucPIRSensor, 2, false, false);          // PIR movement sensor
+/*SharpIR IRDist1(GP2D120X, ucSharpIR1);                                  // IR distance sensor 1
+SharpIR IRDist2(GP2D12FF, ucSharpIR2);                                  // IR distance sensor 2 */
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * function prototypes
@@ -230,17 +230,17 @@ static void vTask10ms( void* arg )
          * the following stuff is done repeately every 10ms:
          */
 
-         ADCSRA |= (1<<ADSC);                                // starting reading ADC
-         while (ADCSRA & (1<<ADSC))                         // waiting til converting finshed
+         ADCSRA |= ( 1<<ADSC );                                     // starting reading ADC
+         while ( ADCSRA & ( 1<<ADSC ))                              // waiting til converting finshed
          {}
-        iADC1Value = ADCW;                                    // reading converted value
+        iADC1Value = ADCW;                                          // reading converted value
 
         /*iDist1 = IRDist1.getDistance(); //Calculate the distance in centimeters and store the value in a variable
         iDist2 = IRDist2.getDistance(); //Calculate the distance in centimeters and store the value in a variable*/
 
-        if(!(PIND & ucButton3))                             // if ucButton pressed
+        if( !( PIND & ucButton1 ) )                                 // if ucButton pressed
 		{
-			PORTD ^= ucSummer;                                    // inverting pin ucSummer
+			PORTD ^= ucSummer;                                      // inverting pin ucSummer
 		}
     }
 }
@@ -250,25 +250,25 @@ static void vTask10ms( void* arg )
  */
 void setup( )
 {
-    randomSeed(analogRead(5));                                  // randomize using noise from analog
+    randomSeed( analogRead( 5 ) );                                  // randomize using noise from analog
 
-    maestroSerial.begin(ulBaud);
+    maestroSerial.begin( ulBaud );
 
-    PIRMotion.begin();
+    PIRMotion.begin( );
 
     /*
      * defining the input/output behaviour of the port pins
      */
     DDRD |= ucLED1 | ucLED2 | ucSummer;                  // digital outputs
-    DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3 | ucPIRSensor);     // digital inputs
+    DDRD &= ~ ( ucButton1 | ucButton2 | ucButton3 | ucPIRSensor );  // digital inputs
 
-	PORTD |= ucButton1 | ucButton2 | ucButton3;                    // activating the pull ups
+	PORTD |= ucButton1 | ucButton2 | ucButton3;                     // activating the pull ups
 
-    ADMUX |= (1<<REFS0);                                // AVCC is reference voltage
-    ADCSRA |= (1<<ADPS1) | (1<<ADPS2);                  // dividing factor, frequency
-    ADCSRA |= (1<<ADEN);                                // switching on the ADC
-    ADCSRA |= (1<<ADSC);                                // 1st dummy converting
-	while (ADCSRA & (1<<ADSC))                         // waiting til converting finshed
+    ADMUX |= ( 1<<REFS0 );                                          // AVCC is reference voltage
+    ADCSRA |= ( 1<<ADPS1 ) | ( 1<<ADPS2 );                          // dividing factor, frequency
+    ADCSRA |= ( 1<<ADEN );                                          // switching on the ADC
+    ADCSRA |= ( 1<<ADSC );                                          // 1st dummy converting
+	while ( ADCSRA & ( 1<<ADSC ) )                                  // waiting til converting finshed
 	{}
 
     /*
