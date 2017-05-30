@@ -52,6 +52,9 @@
 #include <Neurona.h>                                // Multi Layer Perceptron for nonlinear regression
 #include <PirSensor.h>
 #include <SharpIR.h>                                // Support for sharp IR distance sensors
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 
 #define DEBUG 0                                     // enable/disable debug mode
@@ -75,6 +78,10 @@
 #define ucNumberChannelsMaestro 6                   // Number channels of the Maestro board
 #define ucNumberPulsesMaestro 4                     // Number pulses per microsecond Maestro board
 #define maestroSerial Serial1                       // serial communication with the Maestro board
+
+#define OLED_RESET 4                                // for OLED Display
+#define DRAW_DELAY 118
+#define D_NUM 47
 
 /*---------------------------------------------------------------------------------------------------*/
 /*
@@ -108,8 +115,7 @@ const PROGMEM uint16_t iIntervalTicks10ms = 10;         // sampling time in unit
 
 MicroMaestro maestro(maestroSerial);                                    // serial com. with Maestro
 PirSensor PIRMotion = PirSensor(ucPIRSensor, 2, false, false);          // PIR movement sensor
-/*SharpIR IRDist1(GP2D120X, ucSharpIR1);                                  // IR distance sensor 1
-SharpIR IRDist2(GP2D12FF, ucSharpIR2);                                  // IR distance sensor 2 */
+Adafruit_SSD1306 display(OLED_RESET);                                   // SSD1306 Display
 /*---------------------------------------------------------------------------------------------------*/
 /*
  * function prototypes
@@ -163,6 +169,7 @@ void vSetLimits( uint16_t* usActMaxVel, uint8_t* ucActMaxAcc )
 static void vTask1000ms( void* arg )
 {
     TickType_t ticks = xTaskGetTickCount( );    // initialise the ticks variable with the current time
+    uint16_t ii;
 
     while ( 1 )
     {
@@ -192,6 +199,23 @@ static void vTask1000ms( void* arg )
             vSetDesPos( usActDesPos );                       // set desired servo positions
         }*/
 
+        // OLED Display
+        display.clearDisplay();
+
+    	// set text color / Textfarbe setzen
+    	display.setTextColor(WHITE);
+    	// set text size / Textgroesse setzen
+    	display.setTextSize(1);
+    	// set text cursor position / Textstartposition einstellen
+    	display.setCursor(1,0);
+    	// show text / Text anzeigen
+    	display.println("OLED - Display - Test");
+    	display.setCursor(14,56);
+    	display.println("blog.simtronyx.de");
+    	display.setTextSize(2);
+    	display.setCursor(34,15);
+    	display.println("CeBot");
+    	display.display();
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -210,8 +234,19 @@ static void vTask100ms( void* arg )
          * the following stuff is done repeately every 100ms:
          */
 
-         // toggle LED 1
-         DPORT1 ^= ucLED1;
+        // toggle LED 1
+        DPORT1 ^= ucLED1;
+
+        if ( PIND & ucButton3)
+        {
+            display.clearDisplay();
+        }
+
+         /*if ( PIND & ucButton2)
+         {
+            display.drawLine(random(128),random(64),random(128),random(64), WHITE);
+     		display.display();
+        }*/
     }
 }
 /*---------------------------------------------------------------------------------------------------*/
@@ -230,9 +265,9 @@ static void vTask10ms( void* arg )
          * the following stuff is done repeately every 10ms:
          */
 
-         ADCSRA |= ( 1<<ADSC );                                     // starting reading ADC
-         while ( ADCSRA & ( 1<<ADSC ))                              // waiting til converting finshed
-         {}
+        ADCSRA |= ( 1<<ADSC );                                     // starting reading ADC
+        while ( ADCSRA & ( 1<<ADSC ))                              // waiting til converting finshed
+        {}
         iADC1Value = ADCW;                                          // reading converted value
 
         /*iDist1 = IRDist1.getDistance(); //Calculate the distance in centimeters and store the value in a variable
@@ -250,6 +285,8 @@ static void vTask10ms( void* arg )
  */
 void setup( )
 {
+	display.begin(SSD1306_SWITCHCAPVCC, 0x3C);     // initialize with the I2C addr 0x3C
+
     randomSeed( analogRead( 5 ) );                                  // randomize using noise from analog
 
     maestroSerial.begin( ulBaud );
