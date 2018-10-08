@@ -34,10 +34,10 @@ from sense_hat import SenseHat
 import sys
 
 nom_pos = [992, 1500, 1500, 1500, 1500, 1500]    # nominal servo positions
-min_pos = [432, 912, 944, 816, 352, 800]         # minimum servo positions
-max_pos = [2400, 2400, 2032, 2192, 2400, 2224]   # maximum servo positions
+min_pos = [4*432, 4*912, 4*944, 4*816, 4*352, 4*800]         # minimum servo positions
+max_pos = [4*2400, 4*2400, 4*2032, 4*2192, 4*2400, 4*2224]   # maximum servo positions
 max_vel = [0, 0, 0, 0, 0, 0]                     # maximum servo speeds
-max_acc = [4, 4, 4, 4, 4, 4]                     # maximum servo accelerations
+max_acc = [6, 7, 7, 7, 0, 0]                     # maximum servo accelerations
 
 
 def set_min_max_pos(min_position, max_position):
@@ -134,7 +134,7 @@ async def task_10ms(cycle_time):
         pin16_state = False if pin16_state else True
         GPIO.output(16, pin16_state)
 
-        waste_some_time(200)
+        # waste_some_time(200)
 
         next_call += cycle_time
         await asyncio.sleep(next_call - loop.time())
@@ -162,7 +162,7 @@ async def task_100ms(cycle_time):
             pin18_state = False if pin18_state else True
             GPIO.output(18, pin18_state)
 
-            waste_some_time(200)
+            # waste_some_time(200)
 
         next_call += cycle_time
         await asyncio.sleep(next_call - loop.time())
@@ -184,11 +184,11 @@ async def task_1000ms(cycle_time):
         if state_machine.current == 'operation':
             print('1000ms-task start: ', loop.time())
 
-            waste_some_time(200)
+            # waste_some_time(200)
 
             des_pos = [random.randint(min_pos[ii], max_pos[ii])
                        for ii in range(len(nom_pos))]
-
+            print('des_pos:', des_pos)
             set_des_pos(des_pos)
 
         next_call += cycle_time
@@ -197,13 +197,17 @@ async def task_1000ms(cycle_time):
 
 if __name__ == '__main__':
 
+    print('starting initialisation')
     # GPIO stuff
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup([16, 18], GPIO.OUT, initial=GPIO.LOW)
+    print('GPIO settings set')
 
     # servo controller, sense HAT, and state machine stuff
-    controller = maestro.Controller('/dev/ttyAMA0')     # maestro controller
+    controller = maestro.Controller('/dev/ttyACM0')     # maestro controller
+    [print('actuator %s: %s' %(ii, controller.getPosition(ii))) for ii in range(6)]
+
     sense = SenseHat()                                  # sense HAT
     state_machine = Fysom(  # state machine
         {'initial': 'wait', 'events':
@@ -218,6 +222,7 @@ if __name__ == '__main__':
     for dev in devices:
         if dev.name == 'Raspberry Pi Sense HAT Joystick':
             joystick_found = True
+            print('Raspberry Pi Sense HAT Joystick found')
             break
     if not joystick_found:
         print('Raspberry Pi Sense HAT Joystick not found. Aborting ...')
